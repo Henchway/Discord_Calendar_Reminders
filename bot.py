@@ -21,16 +21,9 @@ def get_calender(url):
 
 def get_todays_events(parsed_calendar):
     today = datetime.date.today()
-    result = []
-    for entry in parsed_calendar.walk():
-        if entry.name == "VEVENT":
-            start_date = entry.get("DTSTART").dt
-            if type(start_date) == datetime.datetime:
-                if start_date.date() == today:
-                    summary = entry.get("summary")
-                    description = entry.get("description")
-                    result.append(dict(summary=summary, description=description, start_date=start_date))
-    return result
+    all_events = (entry for entry in parsed_calendar.walk() if entry.name == "VEVENT")
+    events_with_datetime = (entry for entry in all_events if isinstance(entry.get("DTSTART").dt, datetime.datetime))
+    return (entry for entry in events_with_datetime if entry.get("DTSTART").dt.date() == today)
 
 
 raw_cal = get_calender(CALENDER_URL)
@@ -43,14 +36,16 @@ client = discord.Client()
 async def on_ready():
     guild = discord.utils.get(client.guilds, name=GUILD)
     channels = await guild.fetch_channels()
-    for channel in channels:
-        for event in events:
-            now = datetime.datetime.now(tz=pytz.timezone('Europe/Vienna'))
-            remaining_minutes = (event.get("start_date") - now).seconds / 60
+    now = datetime.datetime.now(tz=pytz.timezone('Europe/Vienna'))
+
+    for event in events:
+        for channel in channels:
+            remaining_minutes = (event.get("DTSTART").dt - now).seconds / 60
             if channel.name.replace("-", " ") in event.get(
                     "summary").lower() and 90 > remaining_minutes > 0:
                 await channel.send(
-                    f"{event.get('summary')}\n\n{event.get('start_date').astimezone(pytz.timezone('Europe/Vienna'))}\n\n{event.get('description')}")
+                    f"{event.get('summary')}\n\n{event.get('DTSTART').dt.astimezone(pytz.timezone('Europe/Vienna'))}\n\n{event.get('description')}")
+    print("Finished")
 
 
 client.run(TOKEN)
