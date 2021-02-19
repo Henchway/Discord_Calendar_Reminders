@@ -1,41 +1,41 @@
 # https://realpython.com/how-to-make-a-discord-bot-python/
-
 import datetime
 import os
 
+import aiohttp
 import discord
 import pytz
-import requests
 from dotenv import load_dotenv
 from icalendar import Calendar
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
-CALENDER_URL = os.getenv('CALENDER_URL')
+CALENDAR_URL = os.getenv('CALENDAR_URL')
+
+client = discord.Client()
 
 
-def get_calender(url):
-    return requests.get(url)
+async def get_calendar():
+    async with aiohttp.ClientSession() as session:
+        async with session.get(CALENDAR_URL) as response:
+            return await response.text()
 
 
-def get_todays_events(parsed_calendar):
+async def get_todays_events():
+    cal_response = await get_calendar()
+    parsed_calendar = Calendar.from_ical(cal_response)
     today = datetime.date.today()
     all_events = (entry for entry in parsed_calendar.walk() if entry.name == "VEVENT")
     events_with_datetime = (entry for entry in all_events if isinstance(entry.get("DTSTART").dt, datetime.datetime))
     return (entry for entry in events_with_datetime if entry.get("DTSTART").dt.date() == today)
 
 
-raw_cal = get_calender(CALENDER_URL)
-parsed_cal = Calendar.from_ical(raw_cal.content)
-events = get_todays_events(parsed_cal)
-client = discord.Client()
-
-
 @client.event
 async def on_ready():
     guild = discord.utils.get(client.guilds, name=GUILD)
     channels = await guild.fetch_channels()
+    events = await get_todays_events()
     now = datetime.datetime.now(tz=pytz.timezone('Europe/Vienna'))
 
     for event in events:
@@ -45,7 +45,10 @@ async def on_ready():
                     "summary").lower() and 90 > remaining_minutes > 0:
                 await channel.send(
                     f"{event.get('summary')}\n\n{event.get('DTSTART').dt.astimezone(pytz.timezone('Europe/Vienna'))}\n\n{event.get('description')}")
-    print("Finished")
+    await client.logout()
 
+
+# loop = asyncio.get_event_loop()
+# loop.run_until_complete(client.start(TOKEN))
 
 client.run(TOKEN)
