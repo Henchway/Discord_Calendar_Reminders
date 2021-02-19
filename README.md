@@ -1,4 +1,4 @@
-# Discord_Bot_Outlook_Calender
+#  Discord_Calendar_Reminders
 
 It's required to include a .env file containing the following data:  
 
