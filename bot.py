@@ -1,10 +1,8 @@
 # https://realpython.com/how-to-make-a-discord-bot-python/
 import datetime
 import os
-import platform
 
 import aiohttp
-import asyncio
 import discord
 import pytz
 from dotenv import load_dotenv
@@ -17,9 +15,6 @@ CALENDAR_URL = os.getenv('CALENDAR_URL')
 MINUTES = int(os.getenv('MINUTES'))
 
 client = discord.Client()
-
-if platform.system() == 'Windows':
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 async def get_calendar(url):
